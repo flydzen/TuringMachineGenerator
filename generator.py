@@ -7,11 +7,6 @@ class Move(Enum):
     STOP = '^'
 
 
-LEFT = Move.LEFT
-RIGHT = Move.RIGHT
-STOP = Move.STOP
-
-
 def get_diff(move: Move):
     if move == Move.LEFT:
         return -1
@@ -38,7 +33,7 @@ class State:
         self.name = name
         self.rules = {}
 
-    def add(self, char, move: Move = Move.STOP, to=None, new_char: str = None):
+    def add(self, char, move: Move = Move.STOP, to=None, new_char=None):
         if to is None:
             to = self
         if type(char) == list:
@@ -109,3 +104,8 @@ class Generator:
         while line[index] != '_':
             print(line[index], end=' ')
             index += 1
+
+
+LEFT = Move.LEFT
+RIGHT = Move.RIGHT
+STOP = Move.STOP
