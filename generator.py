@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import wraps
+import pyperclip
 
 
 class Move(Enum):
@@ -37,6 +38,7 @@ def type_checker(expected_types):
             return func(*args, **kwargs)
 
         return wrapper
+
     return type_checker_dec
 
 
@@ -65,19 +67,42 @@ class State:
     def __init__(self, name):
         self.name = name
         self.rules = {}
+        self.tur_mach_rules = []
 
     @type_checker([[str, int, list], [Move], ['State'], [str, int]])
-    def add(self, char, move: Move = Move.STOP, to=None, new_char=None):
+    def add(self, char, move: Move = Move.RIGHT, to=None, new_char=None):
+        def t_move():
+            if move == LEFT:
+                return 'L'
+            elif move == RIGHT:
+                return 'R'
+
+        def ch_to_str(ch):
+            if type(ch) == str:
+                return '\'' + ch + '\''
+            else:
+                return ch
+
         if to is None:
             to = self
+        if char == ' ':
+            char = '_'
+        if new_char == ' ':
+            new_char = '_'
+        if type(char) == list:
+            char = list(map(lambda x: x if x != ' ' else '_', char))
+        if new_char is None:
+            self.tur_mach_rules.append(r'{} : {{{}: {}}}'.format(ch_to_str(char), t_move(), to.name))
+        else:
+            self.tur_mach_rules.append(r'{} : {{{}: {}, write: {}}}'
+                                       .format(ch_to_str(char), t_move(), to.name, ch_to_str(new_char)))
+        return self.add_(char, move, to, new_char)
+
+    def add_(self, char, move, to, new_char):
         if type(char) == list:
             for i in char:
-                self.add(i, move, to, new_char)
+                self.add_(i, move, to, new_char)
         else:
-            if char == ' ':
-                char = '_'
-            if new_char == ' ':
-                new_char = '_'
             if new_char is None:
                 new_char = char
             self.rules[str(char)] = Rule(self.name, str(char), move, to, str(new_char))
@@ -87,10 +112,12 @@ class State:
 class Generator:
     def __init__(self):
         self.line_size = 10_000
+        self.print_radius = 10
         self._states = []
         self.started = None
         self.accepted = None
         self.rejected = None
+        self.tur_mach_io_rules = []
 
     @type_checker([[str]])
     def new_state(self, name, started=False, accepted=False, rejected=False):
@@ -119,7 +146,7 @@ class Generator:
             print(result)
 
     def run(self, input_line, debug=False):
-        line = ['_']*self.line_size + list(input_line) + ['_']*self.line_size
+        line = ['_'] * self.line_size + list(input_line) + ['_'] * self.line_size
         index = self.line_size
         state = self.started
         while state != self.rejected and state != self.accepted:
@@ -129,16 +156,27 @@ class Generator:
                 return
             rule = state.rules[char]
             if debug:
-                print(' '.join(line[index - 5: index + 5]))
-                print('↑'.rjust(11, ' '))
+                print(' '.join(line[index - self.print_radius: index + self.print_radius]))
+                print('↑'.rjust(self.print_radius * 2 + 1, ' '))
                 print(rule)
             line[index] = rule.new_char
             index += get_diff(rule.move)
             state = rule.to
         if state == self.accepted:
             print('accepted')
+            return True
         else:
             print('rejected')
-        while line[index] != '_':
-            print(line[index], end=' ')
-            index += 1
+            return False
+
+    def turing_machine_io(self, inp=None):
+        rules = ['input: ' + inp,
+                 'start state: ' + self.started.name,
+                 'blank: _',
+                 'table:']
+        for state in self._states:
+            rules.append(' '*4 + state.name + ':')
+            rules += list(map(lambda x: ' '*8 + x, state.tur_mach_rules))
+        text = '\n'.join(rules)
+        pyperclip.copy(text)
+        print(text)
