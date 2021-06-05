@@ -1,10 +1,43 @@
 from enum import Enum
+from functools import wraps
 
 
 class Move(Enum):
     LEFT = '<'
     RIGHT = '>'
     STOP = '^'
+
+
+LEFT = Move.LEFT
+RIGHT = Move.RIGHT
+STOP = Move.STOP
+
+
+def type_checker(expected_types):
+    def type_checker_dec(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def type_to_str(x):
+                return str(x) if type(x) == str else x.__name__
+
+            if len(expected_types) > func.__code__.co_argcount:
+                raise Exception("wrong types number")
+            names = func.__code__.co_varnames
+            for ind, expected in enumerate(expected_types):
+                ind = ind + 1
+                name = names[ind]
+                if ind < len(args) and args[ind] is not None:
+                    if not type(args[ind]).__name__ in map(type_to_str, expected):
+                        raise Exception(r'expected ({}), got {}.'
+                                        .format(', '.join(map(type_to_str, expected)), type_to_str(type(args[ind]))))
+                elif name in kwargs:
+                    if not type(kwargs[name]).__name__ in map(type_to_str, expected):
+                        raise Exception(r'expected ({}), got {}.'
+                                        .format(', '.join(map(type_to_str, expected)), type_to_str(type(kwargs[name]))))
+            return func(*args, **kwargs)
+
+        return wrapper
+    return type_checker_dec
 
 
 def get_diff(move: Move):
@@ -33,6 +66,7 @@ class State:
         self.name = name
         self.rules = {}
 
+    @type_checker([[str, int, list], [Move], ['State'], [str, int]])
     def add(self, char, move: Move = Move.STOP, to=None, new_char=None):
         if to is None:
             to = self
@@ -42,6 +76,8 @@ class State:
         else:
             if char == ' ':
                 char = '_'
+            if new_char == ' ':
+                new_char = '_'
             if new_char is None:
                 new_char = char
             self.rules[str(char)] = Rule(self.name, str(char), move, to, str(new_char))
@@ -56,6 +92,7 @@ class Generator:
         self.accepted = None
         self.rejected = None
 
+    @type_checker([[str]])
     def new_state(self, name, started=False, accepted=False, rejected=False):
         state = State(name)
         self._states.append(state)
@@ -92,8 +129,9 @@ class Generator:
                 return
             rule = state.rules[char]
             if debug:
-                print('state: {}->{}, char: {}->{}, move:{}'.format(state.name, rule.to.name,
-                                                                    char, rule.new_char, rule.move.value))
+                print(' '.join(line[index - 5: index + 5]))
+                print('↑'.rjust(11, ' '))
+                print(rule)
             line[index] = rule.new_char
             index += get_diff(rule.move)
             state = rule.to
@@ -104,8 +142,3 @@ class Generator:
         while line[index] != '_':
             print(line[index], end=' ')
             index += 1
-
-
-LEFT = Move.LEFT
-RIGHT = Move.RIGHT
-STOP = Move.STOP
