@@ -147,11 +147,11 @@ class Generator:
 
     def run(self, input_line, debug=False):
         def print_right(i):
-            res = ''
+            res_ = ''
             while line[i] != '_':
-                res += line[i]
+                res_ += line[i]
                 i += 1
-            return res
+            return res_
 
         line = ['_'] * self.line_size + list(input_line) + ['_'] * self.line_size
         index = self.line_size
