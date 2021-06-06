@@ -147,11 +147,11 @@ class Generator:
 
     def run(self, input_line, debug=False):
         def print_right(i):
-            res_ = ''
+            res = ''
             while line[i] != '_':
-                res_ += line[i]
+                res += line[i]
                 i += 1
-            return res_
+            return res
 
         line = ['_'] * self.line_size + list(input_line) + ['_'] * self.line_size
         index = self.line_size
@@ -184,8 +184,58 @@ class Generator:
                  'blank: _',
                  'table:']
         for state in self._states:
-            rules.append(' '*4 + state.name + ':')
-            rules += list(map(lambda x: ' '*8 + x, state.tur_mach_rules))
+            rules.append(' ' * 4 + state.name + ':')
+            rules += list(map(lambda x: ' ' * 8 + x, state.tur_mach_rules))
         text = '\n'.join(rules)
         pyperclip.copy(text)
         print(text)
+
+
+class MultiGenerator:
+    def __init__(self, n):
+        self.n = n
+        self.rules = []
+
+    def add(self, cur_state, moves, chars, next_state=None, new_chars=None):
+        if type(chars) != list:
+            chars = [chars] * self.n
+        flag = False
+        if next_state is None:
+            next_state = cur_state
+        for ind, el in enumerate(chars):
+            if type(el) == list:
+                flag = True
+                for j in el:
+                    self.add(cur_state, moves, chars[:ind] + [j] + chars[ind + 1:], next_state, new_chars)
+                break
+        if not flag:
+            chars = list(map(lambda x: x if x != ' ' else '_', chars))
+            if new_chars is None:
+                new_chars = chars
+            if type(new_chars) != list:
+                new_chars = [new_chars] * self.n
+            zip_chars_moves = None
+            new_chars_temp = []
+            for ind, el in enumerate(new_chars):
+                if type(el) == str:
+                    new_chars_temp.append(el)
+                elif type(el) == int:
+                    new_chars_temp.append(str(el))
+                elif el is None:
+                    new_chars_temp.append(str(chars[ind]))
+                elif type(el).__name__ == 'function':
+                    new_chars_temp.append(str(el(chars)))
+            new_chars = list(map(lambda x: x if x != ' ' else '_', new_chars_temp))
+
+            if type(moves) == Move:
+                zip_chars_moves = map(lambda x: x + ' ' + moves.value, new_chars)
+            elif type(moves) == list:
+                zip_chars_moves = map(lambda x: x[0] + ' ' + x[1], zip(new_chars, moves))
+            self.rules.append(r'{} {} -> {} {}'.format(cur_state, ' '.join(map(str, chars)), next_state,
+                                                       ' '.join(list(zip_chars_moves))))
+
+    def generate(self, file_name):
+        with open(file_name, 'w') as w:
+            print(self.n, file=w)
+            for rule in self.rules:
+                print(rule, file=w)
