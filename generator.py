@@ -120,7 +120,7 @@ class Generator:
         self.tur_mach_io_rules = []
 
     @type_checker([[str]])
-    def new_state(self, name, started=False, accepted=False, rejected=False):
+    def new_state(self, name, started=False, accepted=False, rejected=False) -> State:
         state = State(name)
         self._states.append(state)
         if started:
@@ -146,6 +146,13 @@ class Generator:
             print(result)
 
     def run(self, input_line, debug=False):
+        def print_right(i):
+            res = ''
+            while line[i] != '_':
+                res += line[i]
+                i += 1
+            return res
+
         line = ['_'] * self.line_size + list(input_line) + ['_'] * self.line_size
         index = self.line_size
         state = self.started
@@ -162,12 +169,14 @@ class Generator:
             line[index] = rule.new_char
             index += get_diff(rule.move)
             state = rule.to
+        res = print_right(index)
+        print(res)
         if state == self.accepted:
             print('accepted')
-            return True
+            return True, res
         else:
             print('rejected')
-            return False
+            return False, res
 
     def turing_machine_io(self, inp=None):
         rules = ['input: ' + inp,
