@@ -106,9 +106,8 @@ class State:
             if new_char is None:
                 new_char = char
             new_rule = Rule(self.name, str(char), move, to, str(new_char))
-            for i in self.rules[str(char)]:
-                if str(i) == str(new_rule):
-                    raise Exception("Повторяющееся правило")
+            if char in self.rules:
+                raise Exception("Повторяющееся правило")
             self.rules[str(char)] = new_rule
         return self
 
