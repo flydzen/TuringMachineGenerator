@@ -121,6 +121,9 @@ class Generator:
 
     @type_checker([[str]])
     def new_state(self, name, started=False, accepted=False, rejected=False) -> State:
+        for i in self._states:
+            if i.name == name:
+                raise Exception("Повтор состояния")
         state = State(name)
         self._states.append(state)
         if started:
