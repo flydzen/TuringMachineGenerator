@@ -175,14 +175,11 @@ class Generator:
             line[index] = rule.new_char
             index += get_diff(rule.move)
             state = rule.to
-        res = print_right(index)
-        print(res)
         if state == self.accepted:
-            print('accepted')
-            return True, res
-        else:
-            print('rejected')
-            return False, res
+            return True
+        elif state == self.rejected:
+            return False
+        return None
 
     def turing_machine_io(self, inp=None):
         rules = ['input: ' + inp,
